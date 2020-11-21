@@ -1,4 +1,4 @@
-Laravel MongoDB
+Swoft2 MongoDB
 ===============
 
 [![Latest Stable Version](http://img.shields.io/github/release/jenssegers/laravel-mongodb.svg)](https://packagist.org/packages/jenssegers/mongodb)
@@ -7,16 +7,10 @@ Laravel MongoDB
 [![codecov](https://codecov.io/gh/jenssegers/laravel-mongodb/branch/master/graph/badge.svg)](https://codecov.io/gh/jenssegers/laravel-mongodb/branch/master)
 [![Donate](https://img.shields.io/badge/donate-paypal-blue.svg)](https://www.paypal.me/jenssegers)
 
-This package adds functionalities to the Eloquent model and Query builder for MongoDB, using the original Laravel API. *This library extends the original Laravel classes, so it uses exactly the same methods.*
+针对Swoft2，基于[jenssegers/laravel-mongodb](https://github.com/jenssegers/laravel-mongodb)进行改造的MongoDB包（不支持协程）。
 
 - [Laravel MongoDB](#laravel-mongodb)
   - [Installation](#installation)
-    - [Laravel version Compatibility](#laravel-version-compatibility)
-    - [Laravel](#laravel)
-    - [Lumen](#lumen)
-    - [Non-Laravel projects](#non-laravel-projects)
-  - [Testing](#testing)
-  - [Database Testing](#database-testing)
   - [Configuration](#configuration)
   - [Eloquent](#eloquent)
     - [Extending the base model](#extending-the-base-model)
@@ -52,91 +46,11 @@ Installation
 ------------
 Make sure you have the MongoDB PHP driver installed. You can find installation instructions at http://php.net/manual/en/mongodb.installation.php
 
-### Laravel version Compatibility
-
- Laravel  | Package
-:---------|:----------
- 4.2.x    | 2.0.x
- 5.0.x    | 2.1.x
- 5.1.x    | 2.2.x or 3.0.x
- 5.2.x    | 2.3.x or 3.0.x
- 5.3.x    | 3.1.x or 3.2.x
- 5.4.x    | 3.2.x
- 5.5.x    | 3.3.x
- 5.6.x    | 3.4.x
- 5.7.x    | 3.4.x
- 5.8.x    | 3.5.x
- 6.x      | 3.6.x
- 7.x      | 3.7.x
- 8.x      | 3.8.x
-
 Install the package via Composer:
 
 ```bash
-$ composer require jenssegers/mongodb
+$ composer require anhoder/swoft2-mongodb
 ```
-
-### Laravel
-
-In case your Laravel version does NOT autoload the packages, add the service provider to `config/app.php`:
-
-```php
-Jenssegers\Mongodb\MongodbServiceProvider::class,
-```
-
-### Lumen
-
-For usage with [Lumen](http://lumen.laravel.com), add the service provider in `bootstrap/app.php`. In this file, you will also need to enable Eloquent. You must however ensure that your call to `$app->withEloquent();` is **below** where you have registered the `MongodbServiceProvider`:
-
-```php
-$app->register(Jenssegers\Mongodb\MongodbServiceProvider::class);
-
-$app->withEloquent();
-```
-
-The service provider will register a MongoDB database extension with the original database manager. There is no need to register additional facades or objects.
-
-When using MongoDB connections, Laravel will automatically provide you with the corresponding MongoDB objects.
-
-### Non-Laravel projects
-
-For usage outside Laravel, check out the [Capsule manager](https://github.com/illuminate/database/blob/master/README.md) and add:
-
-```php
-$capsule->getDatabaseManager()->extend('mongodb', function($config, $name) {
-    $config['name'] = $name;
-
-    return new Jenssegers\Mongodb\Connection($config);
-});
-```
-
-Testing
--------
-
-To run the test for this package, run:
-
-```
-docker-compose up
-```
-
-Database Testing
--------
-
-To reset the database after each test, add:
-
-```php
-use Illuminate\Foundation\Testing\DatabaseMigrations;
-```
-
-Also inside each test classes, add:
-
-```php
-use DatabaseMigrations;
-```
-
-Keep in mind that these traits are not yet supported:
-- `use Database Transactions;`
-- `use RefreshDatabase;`
 
 Configuration
 -------------
