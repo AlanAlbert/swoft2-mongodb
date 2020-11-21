@@ -3,7 +3,7 @@ Swoft2 MongoDB
 
 针对Swoft2，基于[jenssegers/laravel-mongodb](https://github.com/jenssegers/laravel-mongodb)进行改造的MongoDB包（不支持协程）。
 
-- [Swoft2 MongoDB](#Swoft2 MongoDB)
+- [Swoft2 MongoDB](#swoft2-mongodb)
   - [Installation](#installation)
   - [Configuration](#configuration)
 
