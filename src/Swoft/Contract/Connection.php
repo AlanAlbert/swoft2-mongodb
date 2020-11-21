@@ -40,6 +40,18 @@ use Throwable;
  * @method \MongoDB\GridFS\Bucket selectGridFSBucket(array $options = [])
  * @method \MongoDB\ChangeStream watch(array $pipeline = [], array $options = [])
  * @method \MongoDB\Database withOptions(array $options = [])
+ * @method \Anhoder\Mongodb\Query\Builder collection($collection)
+ * @method \Anhoder\Mongodb\Query\Builder table($table, $as = null)
+ * @method \Anhoder\Mongodb\Collection getCollection($name)
+ * @method \Anhoder\Mongodb\Schema\Builder getSchemaBuilder()
+ * @method \MongoDB\Database getMongoDB()
+ * @method \MongoDB\Client getMongoClient()
+ * @method string getDatabaseName()
+ * @method string getDefaultDatabaseName($dsn, $config)
+ * @method \MongoDB\Client createConnection($dsn, array $config, array $options)
+ * @method disconnect()
+ * @method float getElapsedTime($start)
+ * @method string getDriverName()
  */
 abstract class Connection extends AbstractConnection implements ConnectionInterface
 {

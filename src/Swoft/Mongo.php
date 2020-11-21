@@ -37,6 +37,22 @@ use Throwable;
  * @method static \MongoDB\GridFS\Bucket selectGridFSBucket(array $options = [])
  * @method static \MongoDB\ChangeStream watch(array $pipeline = [], array $options = [])
  * @method static \MongoDB\Database withOptions(array $options = [])
+ * @method static \Anhoder\Mongodb\Query\Builder collection($collection)
+ * @method static \Anhoder\Mongodb\Query\Builder table($table, $as = null)
+ * @method static \Anhoder\Mongodb\Collection getCollection($name)
+ * @method static \Anhoder\Mongodb\Schema\Builder getSchemaBuilder()
+ * @method static \MongoDB\Database getMongoDB()
+ * @method static \MongoDB\Client getMongoClient()
+ * @method static string getDatabaseName()
+ * @method static string getDefaultDatabaseName($dsn, $config)
+ * @method static \MongoDB\Client createConnection($dsn, array $config, array $options)
+ * @method static disconnect()
+ * @method static float getElapsedTime($start)
+ * @method static string getDriverName()
+ * @method static void create()
+ * @method static bool reconnect()
+ * @method static void close()
+ * @method static void release(bool $force = false)
  */
 class Mongo
 {
