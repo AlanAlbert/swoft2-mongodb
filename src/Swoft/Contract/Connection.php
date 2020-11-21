@@ -20,7 +20,6 @@ use Throwable;
  * Class Connection
  * @package Database\Mongo
  *
- * @mixin \Anhoder\Mongodb\Collection
  */
 abstract class Connection extends AbstractConnection implements ConnectionInterface
 {

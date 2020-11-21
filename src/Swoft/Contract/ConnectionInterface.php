@@ -7,7 +7,7 @@
  * 2020/11/20 6:31 下午
  */
 
-namespace Anhoder\Mongodb\SWoft\Contract;
+namespace Anhoder\Mongodb\Swoft\Contract;
 
 /**
  * Interface ConnectionInterface

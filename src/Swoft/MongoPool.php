@@ -25,6 +25,9 @@ class MongoPool extends AbstractPool
      */
     private $mongoDb;
 
+    /**
+     * @return \Swoft\Connection\Pool\Contract\ConnectionInterface
+     */
     public function createConnection(): ConnectionInterface
     {
         return $this->mongoDb->createConnection($this);

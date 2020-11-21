@@ -9,11 +9,13 @@
 
 namespace Anhoder\Mongodb\Swoft;
 
+use Exception;
+
 /**
  * Class MongoException
  * @package Database\Mongo
  */
-class MongoException extends \Exception
+class MongoException extends Exception
 {
 
 }

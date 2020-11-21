@@ -27,7 +27,7 @@ class MongoConnector implements ConnectorInterface
      */
     public function connect(array $config): Connection
     {
-        $uri  =sprintf('mongo://%s', $config['host']);
+        $uri  =sprintf('mongodb://%s', $config['host']);
 
         if (isset($config['port'])) {
             $uri .= ":{$config['port']}";

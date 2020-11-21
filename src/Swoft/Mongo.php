@@ -59,7 +59,6 @@ class Mongo
      *
      * @return mixed
      * @throws \Anhoder\Mongodb\Swoft\MongoException
-     * @mixin
      */
     public static function __callStatic(string $method, array $arguments)
     {
