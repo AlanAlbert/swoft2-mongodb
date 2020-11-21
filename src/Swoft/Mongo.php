@@ -17,7 +17,6 @@ use Throwable;
  * Class Mongo
  * @package Database\Mongo
  *
- * @see Connection
  */
 class Mongo
 {

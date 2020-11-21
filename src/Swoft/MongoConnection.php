@@ -17,7 +17,6 @@ use Swoft\Bean\Annotation\Mapping\Bean;
  * @package Database\Mongo
  *
  * @Bean()
- *
  */
 class MongoConnection extends Connection
 {
