@@ -22,7 +22,7 @@ final class AutoLoader extends SwoftComponent
     public function getPrefixDirs(): array
     {
         return [
-            __NAMESPACE__ => __DIR__ . '/Swoft',
+            __NAMESPACE__ . '\\Swoft' => __DIR__ . '/Swoft',
         ];
     }
 
