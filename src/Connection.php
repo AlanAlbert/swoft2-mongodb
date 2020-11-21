@@ -11,7 +11,26 @@ use MongoDB\Client;
  * Class Connection
  * @package Anhoder\Mongodb
  *
- * @mixin \MongoDB\Database
+ * @method array __debugInfo()
+ * @method \MongoDB\Collection __get($collectionName)
+ * @method string __toString()
+ * @method \Traversable aggregate(array $pipeline, array $options = [])
+ * @method \MongoDB\Driver\Cursor command($command, array $options = [])
+ * @method array|object createCollection($collectionName, array $options = [])
+ * @method array|object drop(array $options = [])
+ * @method array|object dropCollection($collectionName, array $options = [])
+ * @method \MongoDB\Driver\Manager getManager()
+ * @method \MongoDB\Driver\ReadConcern getReadConcern()
+ * @method \MongoDB\Driver\ReadPreference getReadPreference()
+ * @method array getTypeMap()
+ * @method \MongoDB\Driver\WriteConcern getWriteConcern()
+ * @method \Iterator listCollectionNames(array $options = [])
+ * @method \MongoDB\Model\CollectionInfoIterator listCollections(array $options = [])
+ * @method array|object modifyCollection($collectionName, array $collectionOptions, array $options = [])
+ * @method \MongoDB\Collection selectCollection($collectionName, array $options = [])
+ * @method \MongoDB\GridFS\Bucket selectGridFSBucket(array $options = [])
+ * @method \MongoDB\ChangeStream watch(array $pipeline = [], array $options = [])
+ * @method \MongoDB\Database withOptions(array $options = [])
  */
 class Connection extends BaseConnection
 {

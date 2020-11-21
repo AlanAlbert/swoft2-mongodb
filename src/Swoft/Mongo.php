@@ -17,6 +17,26 @@ use Throwable;
  * Class Mongo
  * @package Database\Mongo
  *
+ * @method static array __debugInfo()
+ * @method static \MongoDB\Collection __get($collectionName)
+ * @method static string __toString()
+ * @method static \Traversable aggregate(array $pipeline, array $options = [])
+ * @method static \MongoDB\Driver\Cursor command($command, array $options = [])
+ * @method static array|object createCollection($collectionName, array $options = [])
+ * @method static array|object drop(array $options = [])
+ * @method static array|object dropCollection($collectionName, array $options = [])
+ * @method static \MongoDB\Driver\Manager getManager()
+ * @method static \MongoDB\Driver\ReadConcern getReadConcern()
+ * @method static \MongoDB\Driver\ReadPreference getReadPreference()
+ * @method static array getTypeMap()
+ * @method static \MongoDB\Driver\WriteConcern getWriteConcern()
+ * @method static \Iterator listCollectionNames(array $options = [])
+ * @method static \MongoDB\Model\CollectionInfoIterator listCollections(array $options = [])
+ * @method static array|object modifyCollection($collectionName, array $collectionOptions, array $options = [])
+ * @method static \MongoDB\Collection selectCollection($collectionName, array $options = [])
+ * @method static \MongoDB\GridFS\Bucket selectGridFSBucket(array $options = [])
+ * @method static \MongoDB\ChangeStream watch(array $pipeline = [], array $options = [])
+ * @method static \MongoDB\Database withOptions(array $options = [])
  */
 class Mongo
 {
