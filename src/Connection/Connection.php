@@ -29,7 +29,7 @@ use Throwable;
  * Class Connection
  * @package Anhoder\Mongodb
  *
- * @Bean()
+ * @Bean(scope=Bean::PROTOTYPE)
  *
  * @method array __debugInfo()
  * @method \MongoDB\Collection __get($collectionName)
