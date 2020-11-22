@@ -29,21 +29,21 @@ class Connector implements ConnectorInterface
     {
         $uri = sprintf('mongodb://%s', $config['host']);
 
-        if (isset($config['port'])) {
+        if (!empty($config['port'])) {
             $uri .= ":{$config['port']}";
         }
 
-        if (isset($config['database'])) {
+        if (!empty($config['database'])) {
             $uri .= "/{$config['database']}";
         }
 
         $uriOptions = $config['uriOptions'] ?? [];
         $driverOptions = $config['driverOptions'] ?? [];
 
-        if (isset($config['username'])) {
+        if (!empty($config['username'])) {
             $uriOptions['username'] = $config['username'];
         }
-        if (isset($config['password'])) {
+        if (!empty($config['password'])) {
             $uriOptions['password'] = $config['password'];
         }
 

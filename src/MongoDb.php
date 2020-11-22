@@ -51,7 +51,7 @@ class MongoDb
     /**
      * @var string
      */
-    protected $prefix;
+    protected $prefix = '';
 
     /**
      * @var array

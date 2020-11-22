@@ -176,7 +176,7 @@ class Connection extends AbstractConnection implements ConnectionInterface
         $this->client = $this->database->getConnector()->connect($config);
 
         $this->defaultDbName = $this->database->getDatabase();
-        $this->db = $this->client->selectDatabase($this->defaultDbName);
+        if (!empty($this->defaultDbName)) $this->db = $this->client->selectDatabase($this->defaultDbName);
     }
 
     /**
