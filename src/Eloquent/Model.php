@@ -4,8 +4,6 @@ namespace Anhoder\Mongodb\Eloquent;
 
 use Anhoder\Mongodb\Mongo;
 use Anhoder\Mongodb\MongoException;
-use Anhoder\Mongodb\Query\Grammar;
-use Anhoder\Mongodb\Query\Processor;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use DateTime;
@@ -16,7 +14,6 @@ use Anhoder\Mongodb\Connection\Connection;
 use Swoft\Db\Eloquent\Model as BaseModel;
 use Swoft\Stdlib\Helper\Arr;
 use Swoft\Stdlib\Helper\Str;
-use Anhoder\Mongodb\Query\Builder as QueryBuilder;
 use MongoDB\BSON\Binary;
 use MongoDB\BSON\ObjectID;
 use MongoDB\BSON\UTCDateTime;
@@ -212,7 +209,7 @@ abstract class Model extends BaseModel
     /**
      * @inheritdoc
      */
-    public function setModelAttribute($key, $value): self
+    public function setModelAttribute($key, $value): BaseModel
     {
         // Convert _id to ObjectID.
         if ($key == '_id' && is_string($value)) {
