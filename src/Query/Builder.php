@@ -15,7 +15,6 @@ use Closure;
 use DateTime;
 use Generator;
 use Swoft\Bean\Annotation\Mapping\Bean;
-use Swoft\Bean\Contract\PrototypeInterface;
 use Swoft\Db\Exception\DbException;
 use Anhoder\Mongodb\Pool\Pool;
 use Swoft\Db\Query\Builder as BaseBuilder;
