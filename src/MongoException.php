@@ -1,6 +1,6 @@
 <?php
 /**
- * The file is part of the swoft_marketing_engine.
+ * The file is part of the swoft2-mongodb.
  *
  * (c) alan <alan1766447919@gmail.com>.
  *
