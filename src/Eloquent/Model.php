@@ -18,6 +18,7 @@ use MongoDB\BSON\Binary;
 use MongoDB\BSON\ObjectID;
 use MongoDB\BSON\UTCDateTime;
 use Swoft\Db\EntityRegister;
+use Anhoder\Mongodb\Query\Builder as QueryBuilder;
 
 /**
  * Class Model
@@ -42,6 +43,63 @@ abstract class Model extends BaseModel
      * @var string
      */
     protected $keyType = 'string';
+
+    /**
+     * Begin querying the model.
+     *
+     * @return Builder
+     * @throws \Swoft\Db\Exception\DbException
+     */
+    public static function query()
+    {
+        return static::new()->newQuery();
+    }
+
+    /**
+     * Get a new query builder for the model's table.
+     *
+     * @return Builder
+     * @throws \Swoft\Db\Exception\DbException
+     */
+    public function newQuery()
+    {
+        return $this->newModelQuery();
+    }
+
+    /**
+     * Get a new query builder that doesn't have any global scopes or eager loading.
+     *
+     * @return Builder
+     * @throws \Swoft\Db\Exception\DbException
+     */
+    public function newModelQuery()
+    {
+        return $this->newEloquentBuilder($this->newBaseQueryBuilder())->setModel($this);
+    }
+
+    /**
+     * Create a new Eloquent query builder for the model.
+     *
+     * @param QueryBuilder $query
+     *
+     * @return Builder
+     */
+    public function newEloquentBuilder($query)
+    {
+        return new Builder($query);
+    }
+
+    /**
+     * Get a new query builder instance for the connection.
+     *
+     * @return QueryBuilder
+     * @throws \Swoft\Db\Exception\DbException
+     */
+    protected function newBaseQueryBuilder()
+    {
+        $poolName = EntityRegister::getPool($this->getClassName());
+        return QueryBuilder::new($poolName, null, null);
+    }
 
     /**
      * Custom accessor for the model's id.
@@ -320,14 +378,6 @@ abstract class Model extends BaseModel
 
         // Perform unset only on current document
         return $this->newQuery()->where($this->getKeyName(), $this->getKey())->unset($columns);
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function newEloquentBuilder($query)
-    {
-        return new Builder($query);
     }
 
     /**

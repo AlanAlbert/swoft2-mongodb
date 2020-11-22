@@ -10,6 +10,7 @@
 namespace Anhoder\Mongodb\Query;
 
 use Anhoder\Mongodb\Mongo;
+use Anhoder\Mongodb\MongoDb;
 use Closure;
 use DateTime;
 use Generator;
@@ -128,12 +129,27 @@ class Builder extends BaseBuilder
         '>=' => '$gte',
     ];
 
+
+    /**
+     * @var array
+     */
+    public $grammars = [
+        MongoDb::MONGODB => \Anhoder\Mongodb\Query\Grammar::class
+    ];
+
+    /**
+     * @var array
+     */
+    public $processors = [
+        MongoDb::MONGODB => \Anhoder\Mongodb\Query\Processor::class
+    ];
+
     /**
      * New builder instance
      *
      * @param mixed ...$params
      *
-     * @return PrototypeInterface|\Swoft\Db\Query\Builder
+     * @return Builder
      * @throws DbException
      */
     public static function new(...$params)
