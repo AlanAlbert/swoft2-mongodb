@@ -250,7 +250,7 @@ abstract class Model extends BaseModel
     /**
      * @inheritdoc
      */
-    public function attributesToArray()
+    public function attributesToArray(): array
     {
         $attributes = parent::attributesToArray();
 
