@@ -42,7 +42,6 @@ use Throwable;
  * @method static \Anhoder\Mongodb\Query\Builder collection($collection)
  * @method static \Anhoder\Mongodb\Query\Builder table($table, $as = null)
  * @method static \MongoDB\Collection getCollection($name)
- * @method static \Anhoder\Mongodb\Schema\Builder getSchemaBuilder()
  * @method static \MongoDB\Database getMongoDB()
  * @method static \MongoDB\Client getMongoClient()
  * @method static string getDatabaseName()

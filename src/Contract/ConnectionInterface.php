@@ -45,11 +45,6 @@ interface ConnectionInterface
     public function getCollection(string $name): Collection;
 
     /**
-     * @return mixed
-     */
-    public function getSchemaBuilder();
-
-    /**
      * @return \MongoDB\Database
      */
     public function getMongoDB(): Database;

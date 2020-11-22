@@ -327,14 +327,6 @@ class Connection extends AbstractConnection implements ConnectionInterface
     }
 
     /**
-     * @return \Swoft\Db\Schema\Builder
-     */
-    public function getSchemaBuilder()
-    {
-        return \Anhoder\Mongodb\Schema\Builder::new($this->poolName);
-    }
-
-    /**
      * Get the MongoDB database object.
      * @return Database
      */
