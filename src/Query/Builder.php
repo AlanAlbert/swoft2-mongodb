@@ -252,14 +252,18 @@ class Builder extends BaseBuilder
             $this->columns = ['*'];
         }
 
-        return $this->getFresh($this->columns, true);
+        $cursor = $this->getFresh($this->columns, true);
+
+        foreach ($cursor as $item) {
+            yield $item;
+        }
     }
 
     /**
      * Execute the query as a fresh "select" statement.
      * @param array $columns
      * @param bool $returnLazy
-     * @return array|static[]|Collection|Generator
+     * @return array|static[]|Collection|\MongoDB\Driver\Cursor
      */
     public function getFresh($columns = [], $returnLazy = false)
     {
@@ -450,9 +454,7 @@ class Builder extends BaseBuilder
             $cursor = $this->getCollection()->find($wheres, $options);
 
             if ($returnLazy) {
-                foreach ($cursor as $item) {
-                    yield $item;
-                }
+                return $cursor;
             }
 
             // Return results as an array with numeric keys

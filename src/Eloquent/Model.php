@@ -180,7 +180,7 @@ abstract class Model extends BaseModel
     /**
      * @inheritdoc
      */
-    public function freshTimestamp()
+    public function freshTimestamp(string $column)
     {
         return new UTCDateTime(Carbon::now()->format('Uv'));
     }
@@ -277,32 +277,31 @@ abstract class Model extends BaseModel
     /**
      * @inheritdoc
      */
-    public function originalIsEquivalent($key): bool
+    public function originalIsEquivalent(string $key, $current): bool
     {
         if (!array_key_exists($key, $this->modelOriginal)) {
             return false;
         }
 
-        $attribute = Arr::get($this->modelAttributes, $key);
         $original = Arr::get($this->modelOriginal, $key);
 
-        if ($attribute === $original) {
+        if ($current === $original) {
             return true;
         }
 
-        if (null === $attribute) {
+        if (null === $current) {
             return false;
         }
 
         if (in_array($key, $this->getDates(), true)) {
-            $attribute = $attribute instanceof UTCDateTime ? $this->asDateTime($attribute) : $attribute;
+            $current = $current instanceof UTCDateTime ? $this->asDateTime($current) : $current;
             $original = $original instanceof UTCDateTime ? $this->asDateTime($original) : $original;
 
-            return $attribute == $original;
+            return $current == $original;
         }
 
-        return is_numeric($attribute) && is_numeric($original)
-            && strcmp((string) $attribute, (string) $original) === 0;
+        return is_numeric($current) && is_numeric($original)
+            && strcmp((string) $current, (string) $original) === 0;
     }
 
     /**

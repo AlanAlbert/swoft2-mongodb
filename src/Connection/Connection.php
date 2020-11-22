@@ -16,6 +16,7 @@ use Anhoder\Mongodb\Pool\Pool;
 use Anhoder\Mongodb\Query\Builder;
 use MongoDB\Client;
 use MongoDB\Database;
+use Swoft\Bean\Annotation\Mapping\Bean;
 use Swoft\Bean\BeanFactory;
 use Swoft\Connection\Pool\AbstractConnection;
 use Swoft\Db\Concern\HasEvent;
@@ -27,6 +28,8 @@ use Throwable;
 /**
  * Class Connection
  * @package Anhoder\Mongodb
+ *
+ * @Bean()
  *
  * @method array __debugInfo()
  * @method \MongoDB\Collection __get($collectionName)

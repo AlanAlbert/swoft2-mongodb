@@ -72,8 +72,13 @@ class Mongo
 
             /* @var Pool $mongoPool */
             $mongoPool  = BeanFactory::getBean($pool);
+            if (!$mongoPool instanceof Pool) {
+                throw new DbException(sprintf('%s is not instance of pool', $pool));
+            }
+
             $connection = $mongoPool->getConnection();
 
+            $connection->setPoolName($pool);
             $connection->setRelease(true);
             $conManager->setConnection($connection, $pool);
         } catch (Throwable $e) {
@@ -90,6 +95,8 @@ class Mongo
         }
         return $connection;
     }
+
+
 
     /**
      * @param string $method
