@@ -157,7 +157,7 @@ class Builder extends BaseBuilder
      *
      * @return \Anhoder\Mongodb\Connection\Connection
      * @throws DbException
-     * @throws \Anhoder\Mongodb\Swoft\MongoException
+     * @throws \Anhoder\Mongodb\MongoException
      */
     public function getConnection()
     {
@@ -175,7 +175,6 @@ class Builder extends BaseBuilder
      * Get collection.
      *
      * @return \MongoDB\Collection
-     * @throws \Anhoder\Mongodb\Swoft\MongoException
      */
     public function getCollection(): \MongoDB\Collection
     {
@@ -261,7 +260,6 @@ class Builder extends BaseBuilder
      * @param array $columns
      * @param bool $returnLazy
      * @return array|static[]|Collection|Generator
-     * @throws \Anhoder\Mongodb\Swoft\MongoException
      */
     public function getFresh($columns = [], $returnLazy = false)
     {
@@ -466,7 +464,6 @@ class Builder extends BaseBuilder
     /**
      * Generate the unique cache key for the current query.
      * @return string
-     * @throws \Anhoder\Mongodb\Swoft\MongoException
      */
     public function generateCacheKey()
     {
@@ -600,7 +597,6 @@ class Builder extends BaseBuilder
 
     /**
      * @inheritdoc
-     * @throws \Anhoder\Mongodb\Swoft\MongoException
      */
     public function insert(array $values)
     {
@@ -629,7 +625,6 @@ class Builder extends BaseBuilder
 
     /**
      * @inheritdoc
-     * @throws \Anhoder\Mongodb\Swoft\MongoException
      */
     public function insertGetId(array $values, $sequence = null): string
     {
@@ -647,7 +642,6 @@ class Builder extends BaseBuilder
 
     /**
      * @inheritdoc
-     * @throws \Anhoder\Mongodb\Swoft\MongoException
      */
     public function update(array $values, array $options = [])
     {
@@ -725,7 +719,6 @@ class Builder extends BaseBuilder
 
     /**
      * @inheritdoc
-     * @throws \Anhoder\Mongodb\Swoft\MongoException
      */
     public function delete($id = null)
     {
@@ -747,7 +740,6 @@ class Builder extends BaseBuilder
 
     /**
      * @inheritdoc
-     * @throws \Anhoder\Mongodb\Swoft\MongoException
      */
     public function truncate(): bool
     {
@@ -770,7 +762,6 @@ class Builder extends BaseBuilder
 
     /**
      * @inheritdoc
-     * @throws \Anhoder\Mongodb\Swoft\MongoException
      */
     public function raw($value): Expression
     {
@@ -867,7 +858,6 @@ class Builder extends BaseBuilder
      * @param $query
      * @param array $options
      * @return int
-     * @throws \Anhoder\Mongodb\Swoft\MongoException
      */
     protected function performUpdate($query, array $options = [])
     {

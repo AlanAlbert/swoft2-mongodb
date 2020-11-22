@@ -3,7 +3,9 @@
 namespace Anhoder\Mongodb\Eloquent;
 
 use Anhoder\Mongodb\Mongo;
-use Anhoder\Mongodb\Swoft\MongoException;
+use Anhoder\Mongodb\MongoException;
+use Anhoder\Mongodb\Query\Grammar;
+use Anhoder\Mongodb\Query\Processor;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use DateTime;
@@ -197,7 +199,7 @@ abstract class Model extends BaseModel
     /**
      * @inheritdoc
      */
-    public function getModelAttribute($key)
+    public function getModelAttribute($key): array
     {
         // Dot notation support.
         if (Str::contains($key, '.') && Arr::has($this->modelAttributes, $key)) {
@@ -209,9 +211,8 @@ abstract class Model extends BaseModel
 
     /**
      * @inheritdoc
-     * @throws \Anhoder\Mongodb\Swoft\MongoException
      */
-    public function setModelAttribute($key, $value)
+    public function setModelAttribute($key, $value): self
     {
         // Convert _id to ObjectID.
         if ($key == '_id' && is_string($value)) {
@@ -279,7 +280,7 @@ abstract class Model extends BaseModel
     /**
      * @inheritdoc
      */
-    public function originalIsEquivalent($key)
+    public function originalIsEquivalent($key): bool
     {
         if (!array_key_exists($key, $this->modelOriginal)) {
             return false;
@@ -335,7 +336,7 @@ abstract class Model extends BaseModel
 
     /**
      * @return \Swoft\Db\Connection\Connection
-     * @throws \Anhoder\Mongodb\Swoft\MongoException
+     * @throws \Anhoder\Mongodb\MongoException
      */
     public function getConnection(): \Swoft\Db\Connection\Connection
     {
@@ -344,7 +345,7 @@ abstract class Model extends BaseModel
 
     /**
      * @return \Anhoder\Mongodb\Connection\Connection
-     * @throws \Anhoder\Mongodb\Swoft\MongoException
+     * @throws \Anhoder\Mongodb\MongoException
      */
     public function getMongoConnection(): Connection
     {
@@ -360,17 +361,6 @@ abstract class Model extends BaseModel
     public function saveOrFail(array $options = [])
     {
         return $this->save();
-    }
-
-    /**
-     * @inheritdoc
-     * @throws \Anhoder\Mongodb\Swoft\MongoException
-     */
-    protected function newBaseQueryBuilder()
-    {
-        $connection = $this->getMongoConnection();
-
-        return new QueryBuilder($connection, $connection->getPostProcessor());
     }
 
     /**
