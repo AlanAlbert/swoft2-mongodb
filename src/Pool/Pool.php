@@ -7,7 +7,7 @@
  * 2020/11/20 8:47 下午
  */
 
-namespace Anhoder\Mongodb\Swoft;
+namespace Anhoder\Mongodb\Pool;
 
 use Swoft\Connection\Pool\AbstractPool;
 use Swoft\Connection\Pool\Contract\ConnectionInterface;
@@ -16,12 +16,12 @@ use Swoft\Connection\Pool\Contract\ConnectionInterface;
  * Class MongoPool
  * @package Database\Mongo
  */
-class MongoPool extends AbstractPool
+class Pool extends AbstractPool
 {
     public const DEFAULT_POOL = 'mongodb.pool';
 
     /**
-     * @var \Anhoder\Mongodb\Swoft\MongoDb
+     * @var \Anhoder\Mongodb\MongoDb
      */
     private $mongoDb;
 
@@ -31,5 +31,13 @@ class MongoPool extends AbstractPool
     public function createConnection(): ConnectionInterface
     {
         return $this->mongoDb->createConnection($this);
+    }
+
+    /**
+     * @return \Anhoder\Mongodb\MongoDb
+     */
+    public function getDatabase()
+    {
+        return $this->mongoDb;
     }
 }

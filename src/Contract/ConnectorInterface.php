@@ -7,9 +7,9 @@
  * 2020/11/20 5:50 下午
  */
 
-namespace Anhoder\Mongodb\Swoft\Contract;
+namespace Anhoder\Mongodb\Contract;
 
-use Anhoder\Mongodb\Connection;
+use MongoDB\Client;
 
 /**
  * Interface ConnectorInterface
@@ -19,7 +19,7 @@ interface ConnectorInterface
 {
     /**
      * @param array $config
-     * @return \Anhoder\Mongodb\Connection
+     * @return Client
      */
-    public function connect(array $config): Connection;
+    public function connect(array $config): Client;
 }

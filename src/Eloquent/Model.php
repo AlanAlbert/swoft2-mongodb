@@ -2,23 +2,30 @@
 
 namespace Anhoder\Mongodb\Eloquent;
 
+use Anhoder\Mongodb\Mongo;
+use Anhoder\Mongodb\Swoft\MongoException;
+use Carbon\Carbon;
+use Carbon\CarbonInterface;
 use DateTime;
-use Illuminate\Contracts\Queue\QueueableCollection;
-use Illuminate\Contracts\Queue\QueueableEntity;
-use Illuminate\Database\Eloquent\Model as BaseModel;
-use Illuminate\Database\Eloquent\Relations\Relation;
-use Illuminate\Support\Arr;
-use Illuminate\Support\Facades\Date;
-use Illuminate\Support\Str;
+use DateTimeInterface;
+use InvalidArgumentException;
+use MongoDB\BSON\UTCDateTimeInterface;
+use Anhoder\Mongodb\Connection\Connection;
+use Swoft\Db\Eloquent\Model as BaseModel;
+use Swoft\Stdlib\Helper\Arr;
+use Swoft\Stdlib\Helper\Str;
 use Anhoder\Mongodb\Query\Builder as QueryBuilder;
 use MongoDB\BSON\Binary;
 use MongoDB\BSON\ObjectID;
 use MongoDB\BSON\UTCDateTime;
+use Swoft\Db\EntityRegister;
 
+/**
+ * Class Model
+ * @package Anhoder\Mongodb\Eloquent
+ */
 abstract class Model extends BaseModel
 {
-    use HybridRelations, EmbedsRelations;
-
     /**
      * The collection associated with the model.
      * @var string
@@ -38,12 +45,6 @@ abstract class Model extends BaseModel
     protected $keyType = 'string';
 
     /**
-     * The parent relation instance.
-     * @var Relation
-     */
-    protected $parentRelation;
-
-    /**
      * Custom accessor for the model's id.
      * @param mixed $value
      * @return mixed
@@ -52,8 +53,8 @@ abstract class Model extends BaseModel
     {
         // If we don't have a value for 'id', we will use the Mongo '_id' value.
         // This allows us to work with models in a more sql-like way.
-        if (!$value && array_key_exists('_id', $this->attributes)) {
-            $value = $this->attributes['_id'];
+        if (!$value && array_key_exists('_id', $this->modelAttributes)) {
+            $value = $this->modelAttributes['_id'];
         }
 
         // Convert ObjectID to string.
@@ -67,15 +68,29 @@ abstract class Model extends BaseModel
     }
 
     /**
-     * @inheritdoc
+     * @return mixed|string
      */
-    public function getQualifiedKeyName()
+    public function getKeyName()
     {
-        return $this->getKeyName();
+        $keyName = parent::getKeyName();
+        if (empty($keyName)) {
+            $keyName = $this->getIdAttribute();
+        }
+
+        return $keyName;
     }
 
     /**
      * @inheritdoc
+     */
+    public function qualifyColumn(string $column): string
+    {
+        return $column;
+    }
+
+    /**
+     * @param $value
+     * @return \MongoDB\BSON\UTCDateTime
      */
     public function fromDateTime($value)
     {
@@ -86,37 +101,81 @@ abstract class Model extends BaseModel
 
         // Let Eloquent convert the value to a DateTime instance.
         if (!$value instanceof DateTime) {
-            $value = parent::asDateTime($value);
+            $value = $this->asDateTime($value);
         }
 
         return new UTCDateTime($value->format('Uv'));
     }
 
     /**
-     * @inheritdoc
+     * Return a timestamp as DateTime object.
+     *
+     * @param mixed $value
+     * @return \Carbon\Carbon|false
      */
     protected function asDateTime($value)
     {
+        // If this value is already a Carbon instance, we shall just return it as is.
+        // This prevents us having to re-instantiate a Carbon instance when we know
+        // it already is one, which wouldn't be fulfilled by the DateTime check.
+        if ($value instanceof CarbonInterface) {
+            return Carbon::instance($value);
+        }
+
+        // If the value is already a DateTime instance, we will just skip the rest of
+        // these checks since they will be a waste of time, and hinder performance
+        // when checking the field. We will just return the DateTime right away.
+        if ($value instanceof DateTimeInterface) {
+            return Carbon::parse(
+                $value->format('Y-m-d H:i:s.u'), $value->getTimezone()
+            );
+        }
+
         // Convert UTCDateTime instances.
-        if ($value instanceof UTCDateTime) {
+        if ($value instanceof UTCDateTimeInterface) {
             $date = $value->toDateTime();
 
             $seconds = $date->format('U');
             $milliseconds = abs($date->format('v'));
             $timestampMs = sprintf('%d%03d', $seconds, $milliseconds);
 
-            return Date::createFromTimestampMs($timestampMs);
+            return Carbon::createFromTimestampMs($timestampMs);
         }
 
-        return parent::asDateTime($value);
+        // If this value is an integer, we will assume it is a UNIX timestamp's value
+        // and format a Carbon object from this timestamp. This allows flexibility
+        // when defining your date fields as they might be UNIX timestamps here.
+        if (is_numeric($value)) {
+            return Carbon::createFromTimestamp($value);
+        }
+
+        // If the value is in simply year, month, day format, we will instantiate the
+        // Carbon instances from that format. Again, this provides for simple date
+        // fields on the database, while still supporting Carbonized conversion.
+        if (preg_match('/^(\d{4})-(\d{1,2})-(\d{1,2})$/', $value)) {
+            return Carbon::instance(Carbon::createFromFormat('Y-m-d', $value)->startOfDay());
+        }
+
+        $format = $this->getDateFormat();
+
+        // Finally, we will just assume this date is in the format used by default on
+        // the database connection and use that format to create the Carbon object
+        // that is returned back out to the developers after we convert it here.
+        try {
+            $date = Carbon::createFromFormat($format, $value);
+        } catch (InvalidArgumentException $e) {
+            $date = false;
+        }
+
+        return $date ?: Carbon::parse($value);
     }
 
     /**
-     * @inheritdoc
+     * @return string
      */
     public function getDateFormat()
     {
-        return $this->dateFormat ?: 'Y-m-d H:i:s';
+        return $this->modelDateFormat ?: 'Y-m-d H:i:s';
     }
 
     /**
@@ -124,7 +183,7 @@ abstract class Model extends BaseModel
      */
     public function freshTimestamp()
     {
-        return new UTCDateTime(Date::now()->format('Uv'));
+        return new UTCDateTime(Carbon::now()->format('Uv'));
     }
 
     /**
@@ -138,42 +197,21 @@ abstract class Model extends BaseModel
     /**
      * @inheritdoc
      */
-    public function getAttribute($key)
+    public function getModelAttribute($key)
     {
-        if (!$key) {
-            return;
-        }
-
         // Dot notation support.
-        if (Str::contains($key, '.') && Arr::has($this->attributes, $key)) {
+        if (Str::contains($key, '.') && Arr::has($this->modelAttributes, $key)) {
             return $this->getAttributeValue($key);
         }
 
-        // This checks for embedded relation support.
-        if (method_exists($this, $key) && !method_exists(self::class, $key)) {
-            return $this->getRelationValue($key);
-        }
-
-        return parent::getAttribute($key);
+        return parent::getModelAttribute($key);
     }
 
     /**
      * @inheritdoc
+     * @throws \Anhoder\Mongodb\Swoft\MongoException
      */
-    protected function getAttributeFromArray($key)
-    {
-        // Support keys in dot notation.
-        if (Str::contains($key, '.')) {
-            return Arr::get($this->attributes, $key);
-        }
-
-        return parent::getAttributeFromArray($key);
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function setAttribute($key, $value)
+    public function setModelAttribute($key, $value)
     {
         // Convert _id to ObjectID.
         if ($key == '_id' && is_string($value)) {
@@ -186,12 +224,27 @@ abstract class Model extends BaseModel
                 $value = $this->fromDateTime($value);
             }
 
-            Arr::set($this->attributes, $key, $value);
+            Arr::set($this->modelAttributes, $key, $value);
 
-            return;
+            return $this;
         }
 
-        return parent::setAttribute($key, $value);
+        return parent::setModelAttribute($key, $value);
+    }
+
+    /**
+     * Get the attributes that should be converted to dates.
+     *
+     * @return array
+     */
+    public function getDates()
+    {
+        if (! $this->usesTimestamps()) [];
+
+        return [
+            $this->getCreatedAtColumn(),
+            $this->getUpdatedAtColumn(),
+        ];
     }
 
     /**
@@ -226,22 +279,14 @@ abstract class Model extends BaseModel
     /**
      * @inheritdoc
      */
-    public function getCasts()
-    {
-        return $this->casts;
-    }
-
-    /**
-     * @inheritdoc
-     */
     public function originalIsEquivalent($key)
     {
-        if (!array_key_exists($key, $this->original)) {
+        if (!array_key_exists($key, $this->modelOriginal)) {
             return false;
         }
 
-        $attribute = Arr::get($this->attributes, $key);
-        $original = Arr::get($this->original, $key);
+        $attribute = Arr::get($this->modelAttributes, $key);
+        $original = Arr::get($this->modelOriginal, $key);
 
         if ($attribute === $original) {
             return true;
@@ -251,16 +296,11 @@ abstract class Model extends BaseModel
             return false;
         }
 
-        if ($this->isDateAttribute($key)) {
+        if (in_array($key, $this->getDates(), true)) {
             $attribute = $attribute instanceof UTCDateTime ? $this->asDateTime($attribute) : $attribute;
             $original = $original instanceof UTCDateTime ? $this->asDateTime($original) : $original;
 
             return $attribute == $original;
-        }
-
-        if ($this->hasCast($key, static::$primitiveCastTypes)) {
-            return $this->castAttribute($key, $attribute) ===
-                $this->castAttribute($key, $original);
         }
 
         return is_numeric($attribute) && is_numeric($original)
@@ -288,190 +328,49 @@ abstract class Model extends BaseModel
     /**
      * @inheritdoc
      */
-    public function push()
-    {
-        if ($parameters = func_get_args()) {
-            $unique = false;
-
-            if (count($parameters) === 3) {
-                list($column, $values, $unique) = $parameters;
-            } else {
-                list($column, $values) = $parameters;
-            }
-
-            // Do batch push by default.
-            $values = Arr::wrap($values);
-
-            $query = $this->setKeysForSaveQuery($this->newQuery());
-
-            $this->pushAttributeValues($column, $values, $unique);
-
-            return $query->push($column, $values, $unique);
-        }
-
-        return parent::push();
-    }
-
-    /**
-     * Remove one or more values from an array.
-     * @param string $column
-     * @param mixed $values
-     * @return mixed
-     */
-    public function pull($column, $values)
-    {
-        // Do batch pull by default.
-        $values = Arr::wrap($values);
-
-        $query = $this->setKeysForSaveQuery($this->newQuery());
-
-        $this->pullAttributeValues($column, $values);
-
-        return $query->pull($column, $values);
-    }
-
-    /**
-     * Append one or more values to the underlying attribute value and sync with original.
-     * @param string $column
-     * @param array $values
-     * @param bool $unique
-     */
-    protected function pushAttributeValues($column, array $values, $unique = false)
-    {
-        $current = $this->getAttributeFromArray($column) ?: [];
-
-        foreach ($values as $value) {
-            // Don't add duplicate values when we only want unique values.
-            if ($unique && (!is_array($current) || in_array($value, $current))) {
-                continue;
-            }
-
-            $current[] = $value;
-        }
-
-        $this->attributes[$column] = $current;
-
-        $this->syncOriginalAttribute($column);
-    }
-
-    /**
-     * Remove one or more values to the underlying attribute value and sync with original.
-     * @param string $column
-     * @param array $values
-     */
-    protected function pullAttributeValues($column, array $values)
-    {
-        $current = $this->getAttributeFromArray($column) ?: [];
-
-        if (is_array($current)) {
-            foreach ($values as $value) {
-                $keys = array_keys($current, $value);
-
-                foreach ($keys as $key) {
-                    unset($current[$key]);
-                }
-            }
-        }
-
-        $this->attributes[$column] = array_values($current);
-
-        $this->syncOriginalAttribute($column);
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function getForeignKey()
-    {
-        return Str::snake(class_basename($this)) . '_' . ltrim($this->primaryKey, '_');
-    }
-
-    /**
-     * Set the parent relation.
-     * @param \Illuminate\Database\Eloquent\Relations\Relation $relation
-     */
-    public function setParentRelation(Relation $relation)
-    {
-        $this->parentRelation = $relation;
-    }
-
-    /**
-     * Get the parent relation.
-     * @return \Illuminate\Database\Eloquent\Relations\Relation
-     */
-    public function getParentRelation()
-    {
-        return $this->parentRelation;
-    }
-
-    /**
-     * @inheritdoc
-     */
     public function newEloquentBuilder($query)
     {
         return new Builder($query);
     }
 
     /**
+     * @return \Swoft\Db\Connection\Connection
+     * @throws \Anhoder\Mongodb\Swoft\MongoException
+     */
+    public function getConnection(): \Swoft\Db\Connection\Connection
+    {
+        throw new MongoException('请使用getMongoConnection获取连接');
+    }
+
+    /**
+     * @return \Anhoder\Mongodb\Connection\Connection
+     * @throws \Anhoder\Mongodb\Swoft\MongoException
+     */
+    public function getMongoConnection(): Connection
+    {
+        $pool = EntityRegister::getPool($this->getClassName());
+
+        return Mongo::connection($pool);
+    }
+
+    /**
+     * @param array $options
+     * @return bool
+     */
+    public function saveOrFail(array $options = [])
+    {
+        return $this->save();
+    }
+
+    /**
      * @inheritdoc
+     * @throws \Anhoder\Mongodb\Swoft\MongoException
      */
     protected function newBaseQueryBuilder()
     {
-        $connection = $this->getConnection();
+        $connection = $this->getMongoConnection();
 
         return new QueryBuilder($connection, $connection->getPostProcessor());
-    }
-
-    /**
-     * @inheritdoc
-     */
-    protected function removeTableFromKey($key)
-    {
-        return $key;
-    }
-
-    /**
-     * Get the queueable relationships for the entity.
-     * @return array
-     */
-    public function getQueueableRelations()
-    {
-        $relations = [];
-
-        foreach ($this->getRelationsWithoutParent() as $key => $relation) {
-            if (method_exists($this, $key)) {
-                $relations[] = $key;
-            }
-
-            if ($relation instanceof QueueableCollection) {
-                foreach ($relation->getQueueableRelations() as $collectionValue) {
-                    $relations[] = $key . '.' . $collectionValue;
-                }
-            }
-
-            if ($relation instanceof QueueableEntity) {
-                foreach ($relation->getQueueableRelations() as $entityKey => $entityValue) {
-                    $relations[] = $key . '.' . $entityValue;
-                }
-            }
-        }
-
-        return array_unique($relations);
-    }
-
-    /**
-     * Get loaded relations for the instance without parent.
-     * @return array
-     */
-    protected function getRelationsWithoutParent()
-    {
-        $relations = $this->getRelations();
-
-        if ($parentRelation = $this->getParentRelation()) {
-            unset($relations[$parentRelation->getQualifiedForeignKeyName()]);
-        }
-
-        return $relations;
     }
 
     /**

@@ -2,8 +2,15 @@
 
 namespace Anhoder\Mongodb\Query;
 
-use Illuminate\Database\Query\Processors\Processor as BaseProcessor;
+use Swoft\Bean\Annotation\Mapping\Bean;
+use Swoft\Db\Query\Processor\Processor as BaseProcessor;
 
+/**
+ * Class Processor
+ * @package Anhoder\Mongodb\Query
+ *
+ * @Bean()
+ */
 class Processor extends BaseProcessor
 {
 }

@@ -4,16 +4,18 @@
  *
  * (c) alan <alan1766447919@gmail.com>.
  *
- * 2020/11/20 6:31 下午
+ * 2020/11/20 11:50 下午
  */
 
-namespace Anhoder\Mongodb\Swoft\Contract;
+namespace Anhoder\Mongodb;
+
+use Exception;
 
 /**
- * Interface ConnectionInterface
+ * Class MongoException
  * @package Database\Mongo
  */
-interface ConnectionInterface
+class MongoException extends Exception
 {
 
 }

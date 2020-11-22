@@ -2,33 +2,34 @@
 
 namespace Anhoder\Mongodb\Query;
 
+use Anhoder\Mongodb\Mongo;
 use Closure;
 use DateTime;
-use Illuminate\Database\Query\Builder as BaseBuilder;
-use Illuminate\Database\Query\Expression;
-use Illuminate\Support\Arr;
-use Illuminate\Support\Collection;
-use Illuminate\Support\LazyCollection;
-use Illuminate\Support\Str;
-use Anhoder\Mongodb\Connection;
+use Generator;
+use Swoft\Bean\Annotation\Mapping\Bean;
+use Swoft\Bean\Contract\PrototypeInterface;
+use Swoft\Db\Exception\DbException;
+use Anhoder\Mongodb\Pool\Pool;
+use Swoft\Db\Query\Builder as BaseBuilder;
+use Swoft\Db\Query\Expression;
+use Swoft\Stdlib\Helper\Arr;
+use Swoft\Stdlib\Helper\Str;
+use Swoft\Db\Eloquent\Collection;
 use MongoDB\BSON\Binary;
 use MongoDB\BSON\ObjectID;
 use MongoDB\BSON\Regex;
 use MongoDB\BSON\UTCDateTime;
-use RuntimeException;
+use Swoft\Db\Query\Grammar\Grammar;
+use Swoft\Db\Query\Processor\Processor;
 
 /**
  * Class Builder
- * @package Anhoder\Mongodb\Query
+ *
+ * @Bean(scope=Bean::PROTOTYPE)
+ *
  */
 class Builder extends BaseBuilder
 {
-    /**
-     * The database collection.
-     * @var \MongoDB\Collection
-     */
-    protected $collection;
-
     /**
      * The column projections.
      * @var array
@@ -121,18 +122,69 @@ class Builder extends BaseBuilder
     ];
 
     /**
-     * @inheritdoc
+     * New builder instance
+     *
+     * @param mixed ...$params
+     *
+     * @return PrototypeInterface|\Swoft\Db\Query\Builder
+     * @throws DbException
      */
-    public function __construct(Connection $connection, Processor $processor)
+    public static function new(...$params)
     {
-        $this->grammar = new Grammar;
-        $this->connection = $connection;
-        $this->processor = $processor;
+        /**
+         * @var string|null    $poolName
+         * @var Grammar|null   $grammar
+         * @var Processor|null $processor
+         */
+        if (empty($params)) {
+            $poolName  = Pool::DEFAULT_POOL;
+            $grammar   = null;
+            $processor = null;
+        } else {
+            [$poolName, $grammar, $processor] = $params;
+        }
+
+        $self = self::__instance();
+
+        $self->poolName = $poolName;
+        $self->setQueryGrammarAndPostProcessor($grammar, $processor);
+
+        return $self;
+    }
+
+    /**
+     * Get the database connection instance.
+     *
+     * @return \Anhoder\Mongodb\Connection\Connection
+     * @throws DbException
+     * @throws \Anhoder\Mongodb\Swoft\MongoException
+     */
+    public function getConnection()
+    {
+        $connection = Mongo::connection($this->poolName);
+
+        // Select db name
+        if (!empty($this->db)) {
+            $connection->db($this->db);
+        }
+
+        return $connection;
+    }
+
+    /**
+     * Get collection.
+     *
+     * @return \MongoDB\Collection
+     * @throws \Anhoder\Mongodb\Swoft\MongoException
+     */
+    public function getCollection(): \MongoDB\Collection
+    {
+        return $this->getConnection()->getCollection($this->from);
     }
 
     /**
      * Set the projections.
-     * @param array $columns
+     * @param mixed $columns
      * @return $this
      */
     public function project($columns)
@@ -147,7 +199,7 @@ class Builder extends BaseBuilder
      * @param int $seconds
      * @return $this
      */
-    public function timeout($seconds)
+    public function timeout(int $seconds)
     {
         $this->timeout = $seconds;
 
@@ -187,7 +239,7 @@ class Builder extends BaseBuilder
     /**
      * @inheritdoc
      */
-    public function get($columns = [])
+    public function get($columns = []): Collection
     {
         return $this->getFresh($columns);
     }
@@ -195,20 +247,21 @@ class Builder extends BaseBuilder
     /**
      * @inheritdoc
      */
-    public function cursor($columns = [])
+    public function cursor(): Generator
     {
-        $result =  $this->getFresh($columns, true);
-        if ($result instanceof LazyCollection) {
-            return $result;
+        if (is_null($this->columns)) {
+            $this->columns = ['*'];
         }
-        throw new RuntimeException("Query not compatible with cursor");
+
+        return $this->getFresh($this->columns, true);
     }
 
     /**
      * Execute the query as a fresh "select" statement.
      * @param array $columns
      * @param bool $returnLazy
-     * @return array|static[]|Collection|LazyCollection
+     * @return array|static[]|Collection|Generator
+     * @throws \Anhoder\Mongodb\Swoft\MongoException
      */
     public function getFresh($columns = [], $returnLazy = false)
     {
@@ -273,7 +326,7 @@ class Builder extends BaseBuilder
                         // https://docs.mongodb.com/manual/reference/method/cursor.count/
                         // count method returns int
 
-                        $totalResults = $this->collection->count($wheres);
+                        $totalResults = $this->getCollection()->count($wheres);
                         // Preserving format expected by framework
                         $results = [
                             [
@@ -335,7 +388,7 @@ class Builder extends BaseBuilder
             }
 
             // Execute aggregation
-            $results = iterator_to_array($this->collection->aggregate($pipeline, $options));
+            $results = iterator_to_array($this->getCollection()->aggregate($pipeline, $options));
 
             // Return results
             return new Collection($results);
@@ -346,9 +399,9 @@ class Builder extends BaseBuilder
 
             // Execute distinct
             if ($wheres) {
-                $result = $this->collection->distinct($column, $wheres);
+                $result = $this->getCollection()->distinct($column, $wheres);
             } else {
-                $result = $this->collection->distinct($column);
+                $result = $this->getCollection()->distinct($column);
             }
 
             return new Collection($result);
@@ -396,14 +449,12 @@ class Builder extends BaseBuilder
             }
 
             // Execute query and get MongoCursor
-            $cursor = $this->collection->find($wheres, $options);
+            $cursor = $this->getCollection()->find($wheres, $options);
 
             if ($returnLazy) {
-                return LazyCollection::make(function () use ($cursor) {
-                    foreach ($cursor as $item) {
-                        yield $item;
-                    }
-                });
+                foreach ($cursor as $item) {
+                    yield $item;
+                }
             }
 
             // Return results as an array with numeric keys
@@ -415,12 +466,13 @@ class Builder extends BaseBuilder
     /**
      * Generate the unique cache key for the current query.
      * @return string
+     * @throws \Anhoder\Mongodb\Swoft\MongoException
      */
     public function generateCacheKey()
     {
         $key = [
-            'connection' => $this->collection->getDatabaseName(),
-            'collection' => $this->collection->getCollectionName(),
+            'connection' => $this->getCollection()->getDatabaseName(),
+            'collection' => $this->getCollection()->getCollectionName(),
             'wheres' => $this->wheres,
             'columns' => $this->columns,
             'groups' => $this->groups,
@@ -463,12 +515,14 @@ class Builder extends BaseBuilder
 
             return $result['aggregate'];
         }
+
+        return 0;
     }
 
     /**
      * @inheritdoc
      */
-    public function exists()
+    public function exists(): bool
     {
         return $this->first() !== null;
     }
@@ -476,7 +530,7 @@ class Builder extends BaseBuilder
     /**
      * @inheritdoc
      */
-    public function distinct($column = false)
+    public function distinct($column = false): BaseBuilder
     {
         $this->distinct = true;
 
@@ -490,7 +544,7 @@ class Builder extends BaseBuilder
     /**
      * @inheritdoc
      */
-    public function orderBy($column, $direction = 'asc')
+    public function orderBy($column, $direction = 'asc'): BaseBuilder
     {
         if (is_string($direction)) {
             $direction = (strtolower($direction) == 'asc' ? 1 : -1);
@@ -525,7 +579,7 @@ class Builder extends BaseBuilder
     /**
      * @inheritdoc
      */
-    public function whereBetween($column, array $values, $boolean = 'and', $not = false)
+    public function whereBetween($column, array $values, $boolean = 'and', $not = false): BaseBuilder
     {
         $type = 'between';
 
@@ -537,7 +591,7 @@ class Builder extends BaseBuilder
     /**
      * @inheritdoc
      */
-    public function forPage($page, $perPage = 15)
+    public function forPage($page, $perPage = 15): BaseBuilder
     {
         $this->paginating = true;
 
@@ -546,6 +600,7 @@ class Builder extends BaseBuilder
 
     /**
      * @inheritdoc
+     * @throws \Anhoder\Mongodb\Swoft\MongoException
      */
     public function insert(array $values)
     {
@@ -567,17 +622,18 @@ class Builder extends BaseBuilder
         }
 
         // Batch insert
-        $result = $this->collection->insertMany($values);
+        $result = $this->getCollection()->insertMany($values);
 
         return (1 == (int) $result->isAcknowledged());
     }
 
     /**
      * @inheritdoc
+     * @throws \Anhoder\Mongodb\Swoft\MongoException
      */
-    public function insertGetId(array $values, $sequence = null)
+    public function insertGetId(array $values, $sequence = null): string
     {
-        $result = $this->collection->insertOne($values);
+        $result = $this->getCollection()->insertOne($values);
 
         if (1 == (int) $result->isAcknowledged()) {
             if ($sequence === null) {
@@ -591,6 +647,7 @@ class Builder extends BaseBuilder
 
     /**
      * @inheritdoc
+     * @throws \Anhoder\Mongodb\Swoft\MongoException
      */
     public function update(array $values, array $options = [])
     {
@@ -634,7 +691,7 @@ class Builder extends BaseBuilder
     /**
      * @inheritdoc
      */
-    public function chunkById($count, callable $callback, $column = '_id', $alias = null)
+    public function chunkById($count, callable $callback, $column = '_id', $alias = null): bool
     {
         return parent::chunkById($count, $callback, $column, $alias);
     }
@@ -642,7 +699,7 @@ class Builder extends BaseBuilder
     /**
      * @inheritdoc
      */
-    public function forPageAfterId($perPage = 15, $lastId = 0, $column = '_id')
+    public function forPageAfterId($perPage = 15, $lastId = 0, $column = '_id'): BaseBuilder
     {
         return parent::forPageAfterId($perPage, $lastId, $column);
     }
@@ -650,7 +707,7 @@ class Builder extends BaseBuilder
     /**
      * @inheritdoc
      */
-    public function pluck($column, $key = null)
+    public function pluck($column, $key = null): Collection
     {
         $results = $this->get($key === null ? [$column] : [$column, $key]);
 
@@ -668,6 +725,7 @@ class Builder extends BaseBuilder
 
     /**
      * @inheritdoc
+     * @throws \Anhoder\Mongodb\Swoft\MongoException
      */
     public function delete($id = null)
     {
@@ -679,7 +737,7 @@ class Builder extends BaseBuilder
         }
 
         $wheres = $this->compileWheres();
-        $result = $this->collection->DeleteMany($wheres);
+        $result = $this->getCollection()->DeleteMany($wheres);
         if (1 == (int) $result->isAcknowledged()) {
             return $result->getDeletedCount();
         }
@@ -689,31 +747,20 @@ class Builder extends BaseBuilder
 
     /**
      * @inheritdoc
-     */
-    public function from($collection, $as = null)
-    {
-        if ($collection) {
-            $this->collection = $this->connection->getCollection($collection);
-        }
-
-        return parent::from($collection);
-    }
-
-    /**
-     * @inheritdoc
+     * @throws \Anhoder\Mongodb\Swoft\MongoException
      */
     public function truncate(): bool
     {
-        $result = $this->collection->deleteMany([]);
+        $result = $this->getCollection()->deleteMany([]);
 
         return (1 === (int) $result->isAcknowledged());
     }
 
     /**
      * Get an array with the values of a given column.
-     * @param string $column
+     * @param $column
      * @param string $key
-     * @return array
+     * @return Collection
      * @deprecated
      */
     public function lists($column, $key = null)
@@ -723,21 +770,17 @@ class Builder extends BaseBuilder
 
     /**
      * @inheritdoc
+     * @throws \Anhoder\Mongodb\Swoft\MongoException
      */
-    public function raw($expression = null)
+    public function raw($value): Expression
     {
         // Execute the closure on the mongodb collection
-        if ($expression instanceof Closure) {
-            return call_user_func($expression, $this->collection);
+        if ($value instanceof Closure) {
+            return call_user_func($value, $this->getCollection());
         }
 
         // Create an expression for the given value
-        if ($expression !== null) {
-            return new Expression($expression);
-        }
-
-        // Quick access to the mongodb collection
-        return $this->collection;
+        return Expression::new($value);
     }
 
     /**
@@ -814,16 +857,17 @@ class Builder extends BaseBuilder
     /**
      * @inheritdoc
      */
-    public function newQuery()
+    public function newQuery(): BaseBuilder
     {
-        return new Builder($this->connection, $this->processor);
+        return Builder::new($this->poolName, $this->grammar, $this->processor);
     }
 
     /**
      * Perform an update query.
-     * @param array $query
+     * @param $query
      * @param array $options
      * @return int
+     * @throws \Anhoder\Mongodb\Swoft\MongoException
      */
     protected function performUpdate($query, array $options = [])
     {
@@ -833,7 +877,7 @@ class Builder extends BaseBuilder
         }
 
         $wheres = $this->compileWheres();
-        $result = $this->collection->UpdateMany($wheres, $query, $options);
+        $result = $this->getCollection()->UpdateMany($wheres, $query, $options);
         if (1 == (int) $result->isAcknowledged()) {
             return $result->getModifiedCount() ? $result->getModifiedCount() : $result->getUpsertedCount();
         }
@@ -862,7 +906,7 @@ class Builder extends BaseBuilder
     /**
      * @inheritdoc
      */
-    public function where($column, $operator = null, $value = null, $boolean = 'and')
+    public function where($column, $operator = null, $value = null, $boolean = 'and'): BaseBuilder
     {
         $params = func_get_args();
 
@@ -981,6 +1025,10 @@ class Builder extends BaseBuilder
      */
     protected function compileWhereAll(array $where)
     {
+        /**
+         * @var $column
+         * @var $values
+         */
         extract($where);
 
         return [$column => ['$all' => array_values($values)]];
@@ -992,6 +1040,11 @@ class Builder extends BaseBuilder
      */
     protected function compileWhereBasic(array $where)
     {
+        /**
+         * @var $operator
+         * @var $value
+         * @var $column
+         */
         extract($where);
         $is_numeric = false;
 
@@ -1059,6 +1112,9 @@ class Builder extends BaseBuilder
      */
     protected function compileWhereNested(array $where)
     {
+        /**
+         * @var $query
+         */
         extract($where);
 
         return $query->compileWheres();
@@ -1070,6 +1126,10 @@ class Builder extends BaseBuilder
      */
     protected function compileWhereIn(array $where)
     {
+        /**
+         * @var $column
+         * @var $values
+         */
         extract($where);
 
         return [$column => ['$in' => array_values($values)]];
@@ -1081,6 +1141,10 @@ class Builder extends BaseBuilder
      */
     protected function compileWhereNotIn(array $where)
     {
+        /**
+         * @var $column
+         * @var $values
+         */
         extract($where);
 
         return [$column => ['$nin' => array_values($values)]];
@@ -1116,6 +1180,11 @@ class Builder extends BaseBuilder
      */
     protected function compileWhereBetween(array $where)
     {
+        /**
+         * @var $not
+         * @var $column
+         * @var $values
+         */
         extract($where);
 
         if ($not) {
@@ -1165,14 +1234,14 @@ class Builder extends BaseBuilder
     }
 
     /**
-     * @inheritdoc
+     * @param $method
+     * @param $parameters
+     * @return void|mixed|false
      */
     public function __call($method, $parameters)
     {
         if ($method == 'unset') {
             return call_user_func_array([$this, 'drop'], $parameters);
         }
-
-        return parent::__call($method, $parameters);
     }
 }

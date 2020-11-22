@@ -2,15 +2,16 @@
 
 namespace Anhoder\Mongodb\Eloquent;
 
-use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
-use Anhoder\Mongodb\Helpers\QueriesRelationships;
+use Swoft\Db\Eloquent\Builder as EloquentBuilder;
 use MongoDB\Driver\Cursor;
 use MongoDB\Model\BSONDocument;
 
+/**
+ * Class Builder
+ * @package Anhoder\Mongodb\Eloquent
+ */
 class Builder extends EloquentBuilder
 {
-    use QueriesRelationships;
-
     /**
      * The methods that should be returned from query builder.
      * @var array
@@ -33,125 +34,23 @@ class Builder extends EloquentBuilder
     /**
      * @inheritdoc
      */
-    public function update(array $values, array $options = [])
+    public function update(array $values, array $options = []): int
     {
-        // Intercept operations on embedded models and delegate logic
-        // to the parent relation instance.
-        if ($relation = $this->model->getParentRelation()) {
-            $relation->performUpdate($this->model, $values);
-
-            return 1;
-        }
-
+        $values = $this->model->getSafeAttributes($values);
         return $this->toBase()->update($this->addUpdatedAtColumn($values), $options);
     }
 
     /**
      * @inheritdoc
      */
-    public function insert(array $values)
-    {
-        // Intercept operations on embedded models and delegate logic
-        // to the parent relation instance.
-        if ($relation = $this->model->getParentRelation()) {
-            $relation->performInsert($this->model, $values);
-
-            return true;
-        }
-
-        return parent::insert($values);
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function insertGetId(array $values, $sequence = null)
-    {
-        // Intercept operations on embedded models and delegate logic
-        // to the parent relation instance.
-        if ($relation = $this->model->getParentRelation()) {
-            $relation->performInsert($this->model, $values);
-
-            return $this->model->getKey();
-        }
-
-        return parent::insertGetId($values, $sequence);
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function delete()
-    {
-        // Intercept operations on embedded models and delegate logic
-        // to the parent relation instance.
-        if ($relation = $this->model->getParentRelation()) {
-            $relation->performDelete($this->model);
-
-            return $this->model->getKey();
-        }
-
-        return parent::delete();
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function increment($column, $amount = 1, array $extra = [])
-    {
-        // Intercept operations on embedded models and delegate logic
-        // to the parent relation instance.
-        if ($relation = $this->model->getParentRelation()) {
-            $value = $this->model->{$column};
-
-            // When doing increment and decrements, Eloquent will automatically
-            // sync the original attributes. We need to change the attribute
-            // temporary in order to trigger an update query.
-            $this->model->{$column} = null;
-
-            $this->model->syncOriginalAttribute($column);
-
-            $result = $this->model->update([$column => $value]);
-
-            return $result;
-        }
-
-        return parent::increment($column, $amount, $extra);
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function decrement($column, $amount = 1, array $extra = [])
-    {
-        // Intercept operations on embedded models and delegate logic
-        // to the parent relation instance.
-        if ($relation = $this->model->getParentRelation()) {
-            $value = $this->model->{$column};
-
-            // When doing increment and decrements, Eloquent will automatically
-            // sync the original attributes. We need to change the attribute
-            // temporary in order to trigger an update query.
-            $this->model->{$column} = null;
-
-            $this->model->syncOriginalAttribute($column);
-
-            return $this->model->update([$column => $value]);
-        }
-
-        return parent::decrement($column, $amount, $extra);
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function chunkById($count, callable $callback, $column = '_id', $alias = null)
+    public function chunkById($count, callable $callback, $column = '_id', $alias = null): bool
     {
         return parent::chunkById($count, $callback, $column, $alias);
     }
 
     /**
-     * @inheritdoc
+     * @param null $expression
+     * @return \Swoft\Db\Eloquent\Collection|\Swoft\Db\Eloquent\Model|\Swoft\Db\Query\Expression
      */
     public function raw($expression = null)
     {
@@ -184,7 +83,7 @@ class Builder extends EloquentBuilder
      * @param array $values
      * @return array
      */
-    protected function addUpdatedAtColumn(array $values)
+    protected function addUpdatedAtColumn(array $values): array
     {
         if (!$this->model->usesTimestamps() || $this->model->getUpdatedAtColumn() === null) {
             return $values;
@@ -192,7 +91,7 @@ class Builder extends EloquentBuilder
 
         $column = $this->model->getUpdatedAtColumn();
         $values = array_merge(
-            [$column => $this->model->freshTimestampString()],
+            [$column => $this->model->freshTimestamp($column)],
             $values
         );
 
@@ -200,7 +99,7 @@ class Builder extends EloquentBuilder
     }
 
     /**
-     * @return \Illuminate\Database\ConnectionInterface
+     * @return \Swoft\Db\Connection\Connection
      */
     public function getConnection()
     {

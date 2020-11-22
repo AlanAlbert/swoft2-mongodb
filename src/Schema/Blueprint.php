@@ -2,19 +2,27 @@
 
 namespace Anhoder\Mongodb\Schema;
 
-use Illuminate\Database\Connection;
+use Anhoder\Mongodb\Connection\Connection;
+use Swoft\Bean\Annotation\Mapping\Bean;
+use Swoft\Stdlib\Fluent;
 
-class Blueprint extends \Illuminate\Database\Schema\Blueprint
+/**
+ * Class Blueprint
+ *
+ * @Bean(scope=Bean::PROTOTYPE)
+ *
+ */
+class Blueprint extends \Swoft\Db\Schema\Blueprint
 {
     /**
      * The MongoConnection object for this blueprint.
-     * @var \Anhoder\Mongodb\Connection
+     * @var \Anhoder\Mongodb\Connection\Connection
      */
     protected $connection;
 
     /**
      * The MongoCollection object for this blueprint.
-     * @var \Anhoder\Mongodb\Collection|\MongoDB\Collection
+     * @var \MongoDB\Collection
      */
     protected $collection;
 
@@ -25,7 +33,9 @@ class Blueprint extends \Illuminate\Database\Schema\Blueprint
     protected $columns = [];
 
     /**
-     * @inheritdoc
+     * Blueprint constructor.
+     * @param \Anhoder\Mongodb\Connection\Connection $connection
+     * @param $collection
      */
     public function __construct(Connection $connection, $collection)
     {
@@ -73,11 +83,11 @@ class Blueprint extends \Illuminate\Database\Schema\Blueprint
     /**
      * @inheritdoc
      */
-    public function dropIndex($indexOrColumns = null)
+    public function dropIndex($index = null)
     {
-        $indexOrColumns = $this->transformColumns($indexOrColumns);
+        $index = $this->transformColumns($index);
 
-        $this->collection->dropIndex($indexOrColumns);
+        $this->collection->dropIndex($index);
 
         return $this;
     }
@@ -251,7 +261,7 @@ class Blueprint extends \Illuminate\Database\Schema\Blueprint
     /**
      * @inheritdoc
      */
-    public function drop()
+    public function drop(): Fluent
     {
         $this->collection->drop();
     }

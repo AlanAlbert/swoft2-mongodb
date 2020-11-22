@@ -7,10 +7,12 @@
  * 2020/11/20 5:19 下午
  */
 
-namespace Anhoder\Mongodb\Swoft;
+namespace Anhoder\Mongodb;
 
-use Anhoder\Mongodb\SWoft\Contract\ConnectorInterface;
-use Anhoder\Mongodb\SWoft\Contract\Connection;
+use Anhoder\Mongodb\Connector\Connector;
+use Anhoder\Mongodb\Contract\ConnectorInterface;
+use Anhoder\Mongodb\Connection\Connection;
+use Anhoder\Mongodb\Pool\Pool;
 
 /**
  * MongoDb配置信息
@@ -19,6 +21,8 @@ use Anhoder\Mongodb\SWoft\Contract\Connection;
  */
 class MongoDb
 {
+    public const MONGODB = 'mongodb';
+
     /**
      * @var string
      */
@@ -43,6 +47,11 @@ class MongoDb
      * @var string
      */
     protected $database;
+
+    /**
+     * @var string
+     */
+    protected $prefix;
 
     /**
      * @var array
@@ -95,6 +104,22 @@ class MongoDb
     }
 
     /**
+     * @return string
+     */
+    public function getPrefix(): string
+    {
+        return $this->prefix;
+    }
+
+    /**
+     * @return string
+     */
+    public function getDriver(): string
+    {
+        return static::MONGODB;
+    }
+
+    /**
      * @return array
      */
     public function getUriOptions(): array
@@ -116,7 +141,7 @@ class MongoDb
      */
     public function getConnector(): ConnectorInterface
     {
-        return bean(MongoConnector::class);
+        return bean(Connector::class);
     }
 
     /**
@@ -124,14 +149,14 @@ class MongoDb
      */
     public function getConnection(): Connection
     {
-        return bean(MongoConnection::class);
+        return bean(Connection::class);
     }
 
     /**
-     * @param \Anhoder\Mongodb\Swoft\MongoPool $pool
-     * @return \Anhoder\Mongodb\SWoft\Contract\Connection
+     * @param \Anhoder\Mongodb\Pool\Pool $pool
+     * @return \Anhoder\Mongodb\Connection\Connection
      */
-    public function createConnection(MongoPool $pool): Connection
+    public function createConnection(Pool $pool): Connection
     {
         $connection = $this->getConnection();
         $connection->initialize($pool, $this);

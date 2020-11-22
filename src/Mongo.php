@@ -7,10 +7,12 @@
  * 2020/11/20 11:44 下午
  */
 
-namespace Anhoder\Mongodb\Swoft;
+namespace Anhoder\Mongodb;
 
-use Anhoder\Mongodb\Swoft\Contract\Connection;
+use Anhoder\Mongodb\Pool\Pool;
+use Anhoder\Mongodb\Connection\ConnectionManager;
 use Swoft\Bean\BeanFactory;
+use Anhoder\Mongodb\Connection\Connection;
 use Throwable;
 
 /**
@@ -39,7 +41,7 @@ use Throwable;
  * @method static \MongoDB\Database withOptions(array $options = [])
  * @method static \Anhoder\Mongodb\Query\Builder collection($collection)
  * @method static \Anhoder\Mongodb\Query\Builder table($table, $as = null)
- * @method static \Anhoder\Mongodb\Collection getCollection($name)
+ * @method static \MongoDB\Collection getCollection($name)
  * @method static \Anhoder\Mongodb\Schema\Builder getSchemaBuilder()
  * @method static \MongoDB\Database getMongoDB()
  * @method static \MongoDB\Client getMongoClient()
@@ -60,20 +62,20 @@ class Mongo
      * @param string $pool
      *
      * @return Connection
-     * @throws \Anhoder\Mongodb\Swoft\MongoException
+     * @throws \Anhoder\Mongodb\MongoException
      */
-    public static function connection(string $pool = MongoPool::DEFAULT_POOL): Connection
+    public static function connection(string $pool = Pool::DEFAULT_POOL): Connection
     {
         try {
             /* @var ConnectionManager $conManager */
             $conManager = BeanFactory::getBean(ConnectionManager::class);
 
-            /* @var MongoPool $redisPool */
-            $redisPool  = BeanFactory::getBean($pool);
-            $connection = $redisPool->getConnection();
+            /* @var Pool $mongoPool */
+            $mongoPool  = BeanFactory::getBean($pool);
+            $connection = $mongoPool->getConnection();
 
             $connection->setRelease(true);
-            $conManager->setConnection($connection);
+            $conManager->setConnection($connection, $pool);
         } catch (Throwable $e) {
             throw new MongoException(
                 sprintf('Mongo pool error is %s file=%s line=%d', $e->getMessage(), $e->getFile(), $e->getLine())
@@ -94,7 +96,7 @@ class Mongo
      * @param array $arguments
      *
      * @return mixed
-     * @throws \Anhoder\Mongodb\Swoft\MongoException
+     * @throws \Anhoder\Mongodb\MongoException
      */
     public static function __callStatic(string $method, array $arguments)
     {

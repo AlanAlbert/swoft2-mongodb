@@ -2,8 +2,12 @@
 
 namespace Anhoder\Mongodb\Query;
 
-use Illuminate\Database\Query\Grammars\Grammar as BaseGrammar;
+use Swoft\Db\Query\Grammar\Grammar as BaseGrammar;
 
+/**
+ * Class Grammar
+ * @package Anhoder\Mongodb\Query
+ */
 class Grammar extends BaseGrammar
 {
 }

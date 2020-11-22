@@ -2,15 +2,71 @@
 
 namespace Anhoder\Mongodb\Schema;
 
+use Anhoder\Mongodb\MongoDb;
+use Anhoder\Mongodb\Pool\Pool;
 use Closure;
-use Anhoder\Mongodb\Connection;
+use Anhoder\Mongodb\Connection\Connection;
+use Swoft\Bean\Annotation\Mapping\Bean;
+use Swoft\Db\Exception\DbException;
+use Swoft\Db\Schema\Builder as BaseBuilder;
+use Swoft\Db\Schema\Grammars\Grammar;
 
-class Builder extends \Illuminate\Database\Schema\Builder
+/**
+* Class Builder
+ *
+ * @Bean(scope=Bean::PROTOTYPE)
+*
+ * @since 2.0
+*/
+class Builder extends BaseBuilder
 {
+    /**
+     * @var array
+     */
+    public $grammars = [
+        MongoDb::MONGODB => \Anhoder\Mongodb\Schema\Grammar::class
+    ];
+
+    /**
+     * @var array
+     */
+    public static $builders = [
+        MongoDb::MONGODB => Builder::class
+    ];
+
+    /**
+     * New builder instance
+     *
+     * @param mixed ...$params
+     *
+     * @return \Swoft\Db\Schema\Builder
+     * @throws DbException
+     */
+    public static function new(...$params): BaseBuilder
+    {
+        /**
+         * @var string|null  $poolName
+         * @var Grammar|null $grammar
+         */
+        if (empty($params)) {
+            $poolName = Pool::DEFAULT_POOL;
+            $grammar  = null;
+        } else {
+            $poolName = $params[0];
+            $grammar  = $params[1] ?? null;
+        }
+        // The driver builder
+        $static = self::getBuilder($poolName);
+        // Set schema config
+        $static->setSchemaGrammar($grammar);
+
+        return $static;
+    }
+
     /**
      * @inheritdoc
      */
-    public function hasColumn($table, $column)
+    public function hasColumn($table, $column): bool
     {
         return true;
     }
@@ -25,12 +81,16 @@ class Builder extends \Illuminate\Database\Schema\Builder
 
     /**
      * Determine if the given collection exists.
-     * @param string $name
+     * @param $name
      * @return bool
      */
     public function hasCollection($name)
     {
-        $db = $this->connection->getMongoDB();
+        /**
+         * @var $connection \Anhoder\Mongodb\Connection\Connection
+         */
+        $connection = $this->getConnection();
+        $db = $connection->getMongoDB();
 
         $collections = iterator_to_array($db->listCollections([
             'filter' => [
@@ -44,16 +104,15 @@ class Builder extends \Illuminate\Database\Schema\Builder
     /**
      * @inheritdoc
      */
-    public function hasTable($collection)
+    public function hasTable($table): bool
     {
-        return $this->hasCollection($collection);
+        return $this->hasCollection($table);
     }
 
     /**
      * Modify a collection on the schema.
-     * @param string $collection
+     * @param $collection
      * @param Closure $callback
-     * @return bool
      */
     public function collection($collection, Closure $callback)
     {
@@ -67,17 +126,17 @@ class Builder extends \Illuminate\Database\Schema\Builder
     /**
      * @inheritdoc
      */
-    public function table($collection, Closure $callback)
+    public function table($table, Closure $callback)
     {
-        return $this->collection($collection, $callback);
+        $this->collection($table, $callback);
     }
 
     /**
      * @inheritdoc
      */
-    public function create($collection, Closure $callback = null, array $options = [])
+    public function create($table, Closure $callback = null, array $options = [])
     {
-        $blueprint = $this->createBlueprint($collection);
+        $blueprint = $this->createBlueprint($table);
 
         $blueprint->create($options);
 
@@ -89,10 +148,10 @@ class Builder extends \Illuminate\Database\Schema\Builder
     /**
      * @inheritdoc
      */
-    public function dropIfExists($collection)
+    public function dropIfExists($table)
     {
-        if ($this->hasCollection($collection)) {
-            return $this->drop($collection);
+        if ($this->hasCollection($table)) {
+            return $this->drop($table);
         }
 
         return false;
@@ -101,9 +160,9 @@ class Builder extends \Illuminate\Database\Schema\Builder
     /**
      * @inheritdoc
      */
-    public function drop($collection)
+    public function drop($table)
     {
-        $blueprint = $this->createBlueprint($collection);
+        $blueprint = $this->createBlueprint($table);
 
         return $blueprint->drop();
     }
@@ -121,19 +180,27 @@ class Builder extends \Illuminate\Database\Schema\Builder
     /**
      * @inheritdoc
      */
-    protected function createBlueprint($collection, Closure $callback = null)
+    protected function createBlueprint($table, Closure $callback = null)
     {
-        return new Blueprint($this->connection, $collection);
+        /**
+         * @var Connection $connection
+         */
+        $connection = $this->getConnection();
+        return new Blueprint($connection, $table);
     }
 
     /**
      * Get collection.
-     * @param string $name
+     * @param $name
      * @return bool|\MongoDB\Model\CollectionInfo
      */
     public function getCollection($name)
     {
-        $db = $this->connection->getMongoDB();
+        /**
+         * @var Connection $connection
+         */
+        $connection = $this->getConnection();
+        $db = $connection->getMongoDB();
 
         $collections = iterator_to_array($db->listCollections([
             'filter' => [
@@ -151,7 +218,11 @@ class Builder extends \Illuminate\Database\Schema\Builder
     protected function getAllCollections()
     {
         $collections = [];
-        foreach ($this->connection->getMongoDB()->listCollections() as $collection) {
+        /**
+         * @var Connection $connection
+         */
+        $connection = $this->getConnection();
+        foreach ($connection->getMongoDB()->listCollections() as $collection) {
             $collections[] = $collection->getName();
         }
 

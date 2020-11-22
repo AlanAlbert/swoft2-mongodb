@@ -7,10 +7,10 @@
  * 2020/11/20 5:49 下午
  */
 
-namespace Anhoder\Mongodb\Swoft;
+namespace Anhoder\Mongodb\Connector;
 
-use Anhoder\Mongodb\Connection;
-use Anhoder\Mongodb\Swoft\Contract\ConnectorInterface;
+use Anhoder\Mongodb\Contract\ConnectorInterface;
+use MongoDB\Client;
 use Swoft\Bean\Annotation\Mapping\Bean;
 
 /**
@@ -19,15 +19,15 @@ use Swoft\Bean\Annotation\Mapping\Bean;
  *
  * @Bean()
  */
-class MongoConnector implements ConnectorInterface
+class Connector implements ConnectorInterface
 {
     /**
      * @param array $config
-     * @return \Anhoder\Mongodb\Connection
+     * @return \MongoDB\Client
      */
-    public function connect(array $config): Connection
+    public function connect(array $config): Client
     {
-        $uri  =sprintf('mongodb://%s', $config['host']);
+        $uri = sprintf('mongodb://%s', $config['host']);
 
         if (isset($config['port'])) {
             $uri .= ":{$config['port']}";
@@ -47,12 +47,6 @@ class MongoConnector implements ConnectorInterface
             $uriOptions['password'] = $config['password'];
         }
 
-        $config = [
-            'dsn'           => $uri,
-            'options'       => $uriOptions,
-            'driverOptions' => $driverOptions,
-        ];
-
-        return new Connection($config);
+        return new Client($uri, $uriOptions, $driverOptions);
     }
 }
