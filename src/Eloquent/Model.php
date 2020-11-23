@@ -5,7 +5,6 @@ namespace Anhoder\Mongodb\Eloquent;
 use Anhoder\Mongodb\Mongo;
 use Anhoder\Mongodb\MongoException;
 use Carbon\Carbon;
-use Carbon\CarbonInterface;
 use DateTime;
 use DateTimeInterface;
 use InvalidArgumentException;
@@ -175,7 +174,7 @@ abstract class Model extends BaseModel
         // If this value is already a Carbon instance, we shall just return it as is.
         // This prevents us having to re-instantiate a Carbon instance when we know
         // it already is one, which wouldn't be fulfilled by the DateTime check.
-        if ($value instanceof CarbonInterface) {
+        if ($value instanceof Carbon) {
             return Carbon::instance($value);
         }
 
@@ -193,10 +192,8 @@ abstract class Model extends BaseModel
             $date = $value->toDateTime();
 
             $seconds = $date->format('U');
-            $milliseconds = abs($date->format('v'));
-            $timestampMs = sprintf('%d%03d', $seconds, $milliseconds);
 
-            return Carbon::createFromTimestampMs($timestampMs);
+            return Carbon::createFromTimestampUTC($seconds);
         }
 
         // If this value is an integer, we will assume it is a UNIX timestamp's value
