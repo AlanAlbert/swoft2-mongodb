@@ -197,10 +197,15 @@ class Builder extends BaseBuilder
      * Get collection.
      *
      * @return \MongoDB\Collection
+     * @throws \Anhoder\Mongodb\MongoException
      */
     public function getCollection(): \MongoDB\Collection
     {
-        return $this->getConnection()->getCollection($this->from);
+        $connection = $this->getConnection();
+        $collection = $connection->getCollection($this->from);
+        $connection->release();
+
+        return $collection;
     }
 
     /**
