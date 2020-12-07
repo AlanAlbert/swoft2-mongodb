@@ -10,7 +10,7 @@
 return [
     // MongoDB
     'mongoDb'           => [
-        'class'         => \Anhoder\Mongodb\Swoft\MongoDb::class,
+        'class'         => \Anhoder\Mongodb\MongoDb::class,
         'host'          => '127.0.0.1',
         'port'          => 27017,
         'username'      => null,
@@ -20,7 +20,7 @@ return [
         'driverOptions' => [],
     ],
     'mongodb.pool'      => [
-        'class'       => \Anhoder\Mongodb\Swoft\MongoPool::class,
+        'class'       => \Anhoder\Mongodb\Pool\Pool::class,
         'mongoDb'     => bean('mongoDb'),
         'minActive'   => 5,
         'maxActive'   => 10,
