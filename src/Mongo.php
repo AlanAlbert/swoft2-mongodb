@@ -107,6 +107,9 @@ class Mongo
     public static function __callStatic(string $method, array $arguments)
     {
         $connection = self::connection();
-        return $connection->{$method}(...$arguments);
+        $ret = $connection->{$method}(...$arguments);
+        $connection->release();
+
+        return $ret;
     }
 }
